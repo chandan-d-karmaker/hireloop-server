@@ -1,11 +1,12 @@
 const express = require('express');
+const cors = require('cors');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const app = express()
 const port = 8080
 
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
 app.get('/', (req, res) => {
     res.send('Hello World!')
@@ -29,7 +30,20 @@ async function run() {
         const database = client.db("hireloop_db");
         const jobsCollection = database.collection("jobs");
 
-        app.post('/jobs', async (req, res) => {
+        app.get('/api/jobs', async (req, res) => {
+            const query = {};
+            if(req.query.companyId){
+                query.companyId = req.query.companyId;
+            }
+            if(req.query.status){
+                query.status = req.query.status;
+            }
+            const cursor = jobsCollection.find(query);
+            const jobs = await cursor.toArray();
+            res.send(jobs);
+        });
+
+        app.post('/api/jobs', async (req, res) => {
             const job = req.body;
             const result = await jobsCollection.insertOne(job);
             res.send(result);
