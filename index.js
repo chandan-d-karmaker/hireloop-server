@@ -44,6 +44,16 @@ async function run() {
             res.send(jobs);
         });
 
+        app.get('/api/my/companies', async (req, res) => {
+            const query = {};
+            if(req.query.addBy) {
+                query.addBy = req.query.addBy;
+            }
+            const cursor = companiesCollection.find(query);
+            const companies = await cursor.toArray();
+            res.send(companies);
+        });
+
         app.post('/api/companies', async (req, res) => {
             const company = req.body;
             const newCompany = {
