@@ -46,8 +46,8 @@ async function run() {
 
         app.get('/api/my/companies', async (req, res) => {
             const query = {};
-            if(req.query.addBy) {
-                query.addBy = req.query.addBy;
+            if(req.query.addedBy) {
+                query.addedBy = req.query.addedBy;
             }
             const cursor = companiesCollection.find(query);
             const companies = await cursor.toArray();
