@@ -30,6 +30,13 @@ async function run() {
         const database = client.db("hireloop_db");
         const jobsCollection = database.collection("jobs");
         const companiesCollection = database.collection("companies");
+        const usersCollection = database.collection("user");
+
+        app.get('/api/users', async (req, res) => {
+            const cursor = usersCollection.find().skip(2);
+            const result = await cursor.toArray();
+            res.send(result);
+        });
 
         app.get('/api/jobs', async (req, res) => {
             const query = {};
@@ -66,7 +73,11 @@ async function run() {
 
         app.post('/api/jobs', async (req, res) => {
             const job = req.body;
-            const result = await jobsCollection.insertOne(job);
+            const newJob = {
+                ...job,
+                createdAt: new Date(),
+            }
+            const result = await jobsCollection.insertOne(newJob);
             res.send(result);
         });
 
