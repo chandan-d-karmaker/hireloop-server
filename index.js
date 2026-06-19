@@ -40,12 +40,53 @@ async function run() {
 
         app.get('/api/jobs', async (req, res) => {
             const query = {};
-            if (req.query.companyId) {
-                query.companyId = req.query.companyId;
+
+            // Extract all possible query parameters from the request
+            const {
+                companyId,
+                status,
+                search,
+                category,
+                jobType,
+                workModel
+            } = req.query;
+
+            // 1. Existing filters
+            if (companyId) {
+                query.companyId = companyId;
             }
-            if (req.query.status) {
-                query.status = req.query.status;
+            if (status) {
+                query.status = status;
             }
+
+            // 2. Search by Title or Company Name (using MongoDB $regex for partial match)
+            if (search) {
+                query.$or = [
+                    { title: { $regex: search, $options: 'i' } },
+                    { companyName: { $regex: search, $options: 'i' } }
+                ];
+            }
+
+            // 3. Filter by Category (matches your DB "category" field)
+            if (category && category !== 'all') {
+                query.category = category;
+            }
+
+            // 4. Filter by Job Type (matches your DB "jobType" field)
+            if (jobType && jobType !== 'all') {
+                query.jobType = jobType;
+            }
+
+            // 5. Filter by Work Model (Remote vs On-site) (matches your DB "isRemote" boolean field)
+            if (workModel) {
+                if (workModel === 'remote') {
+                    query.isRemote = true; // looks for "isRemote": true
+                } else if (workModel === 'onsite') {
+                    query.isRemote = false; // looks for "isRemote": false
+                }
+            }
+
+            // Execute the query
             const cursor = jobsCollection.find(query);
             const jobs = await cursor.toArray();
             res.send(jobs);
@@ -56,12 +97,12 @@ async function run() {
             const result = await cursor.toArray();
             res.send(result);
         });
-        
-        app.get('/api/all-jobs', async (req, res) => {
-            const cursor = jobsCollection.find();
-            const result = await cursor.toArray();
-            res.send(result);
-        });
+
+        // app.get('/api/all-jobs', async (req, res) => {
+        //     const cursor = jobsCollection.find();
+        //     const result = await cursor.toArray();
+        //     res.send(result);
+        // });
 
         app.get('/api/companies', async (req, res) => {
             const cursor = companiesCollection.find().skip(2);
