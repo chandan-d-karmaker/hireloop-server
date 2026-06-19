@@ -51,6 +51,24 @@ async function run() {
             res.send(jobs);
         });
 
+        app.get('/api/feat-jobs', async (req, res) => {
+            const cursor = jobsCollection.find().limit(6);
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+        
+        app.get('/api/all-jobs', async (req, res) => {
+            const cursor = jobsCollection.find();
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+
+        app.get('/api/companies', async (req, res) => {
+            const cursor = companiesCollection.find().skip(2);
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+
         app.get('/api/my/companies', async (req, res) => {
             const query = {};
             if (req.query.addedBy) {
