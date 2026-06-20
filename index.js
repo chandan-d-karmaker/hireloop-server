@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 const port = 8080
 
@@ -98,11 +98,16 @@ async function run() {
             res.send(result);
         });
 
-        // app.get('/api/all-jobs', async (req, res) => {
-        //     const cursor = jobsCollection.find();
-        //     const result = await cursor.toArray();
-        //     res.send(result);
-        // });
+        app.get('/api/jobs/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log('id', id);
+            const query = {
+                _id: new ObjectId(id)
+            };
+            const result = await jobsCollection.findOne(query);
+            console.log('result', result);
+            res.send(result);
+        });
 
         app.get('/api/companies', async (req, res) => {
             const cursor = companiesCollection.find().skip(2);
