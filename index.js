@@ -109,58 +109,106 @@ async function run() {
             res.send(result);
         });
 
+        // app.get('/api/jobs', async (req, res) => {
+        //     const query = {};
+
+        //     // Extract all possible query parameters from the request
+        //     const {
+        //         companyId,
+        //         status,
+        //         search,
+        //         category,
+        //         jobType,
+        //         workModel
+        //     } = req.query;
+
+        //     // 1. Existing filters
+        //     if (companyId) {
+        //         query.companyId = companyId;
+        //     }
+        //     if (status) {
+        //         query.status = status;
+        //     }
+
+        //     // 2. Search by Title or Company Name (using MongoDB $regex for partial match)
+        //     if (search) {
+        //         query.$or = [
+        //             { title: { $regex: search, $options: 'i' } },
+        //             { companyName: { $regex: search, $options: 'i' } }
+        //         ];
+        //     }
+
+        //     // 3. Filter by Category (matches your DB "category" field)
+        //     if (category && category !== 'all') {
+        //         query.category = category;
+        //     }
+
+        //     // 4. Filter by Job Type (matches your DB "jobType" field)
+        //     if (jobType && jobType !== 'all') {
+        //         query.jobType = jobType;
+        //     }
+
+        //     // 5. Filter by Work Model (Remote vs On-site) (matches your DB "isRemote" boolean field)
+        //     if (workModel) {
+        //         if (workModel === 'remote') {
+        //             query.isRemote = true; // looks for "isRemote": true
+        //         } else if (workModel === 'onsite') {
+        //             query.isRemote = false; // looks for "isRemote": false
+        //         }
+        //     }
+
+        //     // Execute the query
+        //     const cursor = jobsCollection.find(query);
+        //     const jobs = await cursor.toArray();
+        //     res.send(jobs);
+        // });
+
         app.get('/api/jobs', async (req, res) => {
+            console.log('server side q', req.query)
             const query = {};
-
-            // Extract all possible query parameters from the request
-            const {
-                companyId,
-                status,
-                search,
-                category,
-                jobType,
-                workModel
-            } = req.query;
-
-            // 1. Existing filters
-            if (companyId) {
-                query.companyId = companyId;
-            }
-            if (status) {
-                query.status = status;
-            }
-
-            // 2. Search by Title or Company Name (using MongoDB $regex for partial match)
-            if (search) {
+            // job filter related query
+            if (req.query.search) {
                 query.$or = [
-                    { title: { $regex: search, $options: 'i' } },
-                    { companyName: { $regex: search, $options: 'i' } }
-                ];
+                    { jobTitle: { $regex: req.query.search, $options: 'i' } },
+                    { companyName: { $regex: req.query.search, $options: 'i' } }
+                ]
             }
 
-            // 3. Filter by Category (matches your DB "category" field)
-            if (category && category !== 'all') {
-                query.category = category;
+            if (req.query.jobType) {
+                query.jobType = req.query.jobType
+            }
+            if (req.query.jobCategory) {
+                query.jobCategory = req.query.jobCategory
+            }
+            if (req.query.isRemote) {
+                query.isRemote = req.query.isRemote
             }
 
-            // 4. Filter by Job Type (matches your DB "jobType" field)
-            if (jobType && jobType !== 'all') {
-                query.jobType = jobType;
+
+
+            // company related query
+            if (req.query.companyId) {
+                query.companyId = req.query.companyId;
+            }
+            if (req.query.status) {
+                query.status = req.query.status;
             }
 
-            // 5. Filter by Work Model (Remote vs On-site) (matches your DB "isRemote" boolean field)
-            if (workModel) {
-                if (workModel === 'remote') {
-                    query.isRemote = true; // looks for "isRemote": true
-                } else if (workModel === 'onsite') {
-                    query.isRemote = false; // looks for "isRemote": false
-                }
+            // pagination related work
+            if (req.query.page) {
+                const page = req.query.page;
+                const perPage = req.query.perPage || 6;
+                const skipItems = (page - 1) * perPage
+
+                const total = await jobsCollection.countDocuments(query);
+                const cursor = jobsCollection.find(query).skip(skipItems).limit(perPage);
+                const jobs = await cursor.toArray();
+                return res.send({ total, jobs });
             }
 
-            // Execute the query
             const cursor = jobsCollection.find(query);
-            const jobs = await cursor.toArray();
-            res.send(jobs);
+            const result = await cursor.toArray();
+            res.send(result);
         });
 
         app.get('/api/feat-jobs', async (req, res) => {
