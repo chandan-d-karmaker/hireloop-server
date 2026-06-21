@@ -12,6 +12,12 @@ app.get('/', (req, res) => {
     res.send('Hello World!')
 })
 
+const logger = (req, res, next) => {
+    console.log('logger middleware logged', req.params);
+    next();
+}
+
+
 const uri = process.env.MONGO_DB_URI;;
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -34,6 +40,46 @@ async function run() {
         const applicationsCollection = database.collection("applications");
         const planCollection = database.collection('plans');
         const subscriptionCollection = database.collection('subscriptions');
+        const sessionCollection = database.collection('session');
+
+        // verification related
+        const verifyToken = async (req, res, next) => {
+
+            const authHeader = req.headers?.authorization;
+            if (!authHeader) {
+                return res.status(401).send({ message: 'unauthorized access' })
+            }
+
+            const token = authHeader.split(' ')[1]
+
+            if (!token) {
+                return res.status(401).send({ message: 'unauthorized access' })
+            }
+
+            const query = { token: token }
+            const session = await sessionCollection.findOne(query);
+
+              if (!session) {
+                return res.status(401).send({ message: 'unauthorized access' })
+            }
+
+            const userId = session.userId;
+
+
+            const userQuery = {
+                _id: userId
+            }
+
+            const user = await usersCollection.findOne(userQuery);
+              if (!user) {
+                return res.status(401).send({ message: 'unauthorized access' })
+            }
+            // set data in the req object
+            req.user = user;
+            next();
+        }
+
+        
 
         app.get('/api/users', async (req, res) => {
             const cursor = usersCollection.find().skip(2);
@@ -112,7 +158,7 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/api/companies', async (req, res) => {
+        app.get('/api/companies', verifyToken, async (req, res) => {
             const cursor = companiesCollection.find();
             const companies = await cursor.toArray();
 
@@ -146,7 +192,7 @@ async function run() {
             res.send(result);
         });
 
-        app.patch('/api/companies/:id', async (req, res) => {
+        app.patch('/api/companies/:id', logger, verifyToken, async (req, res) => {
             const id = req.params.id;
             const updatedCompany = req.body;
             const filter = { _id: new ObjectId(id) }
@@ -181,7 +227,7 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/api/applications', async (req, res) => {
+        app.get('/api/applications', verifyToken, async (req, res) => {
             const query = {};
             if (req.query.applicantId) {
                 query.applicantId = req.query.applicantId;
