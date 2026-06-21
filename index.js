@@ -59,7 +59,7 @@ async function run() {
             const query = { token: token }
             const session = await sessionCollection.findOne(query);
 
-              if (!session) {
+            if (!session) {
                 return res.status(401).send({ message: 'unauthorized access' })
             }
 
@@ -71,7 +71,7 @@ async function run() {
             }
 
             const user = await usersCollection.findOne(userQuery);
-              if (!user) {
+            if (!user) {
                 return res.status(401).send({ message: 'unauthorized access' })
             }
             // set data in the req object
@@ -79,7 +79,29 @@ async function run() {
             next();
         }
 
-        
+        // must be used after verifyToken middleware
+        const verifySeeker = async (req, res, next) => {
+            if (req.user?.role !== 'seeker') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
+
+        const verifyRecruiter = async (req, res, next) => {
+            if (req.user?.role !== 'recruiter') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
+
+        // must be used after verifyToken middleware
+        const verifyAdmin = async (req, res, next) => {
+            if (req.user.role !== 'admin') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
+
 
         app.get('/api/users', async (req, res) => {
             const cursor = usersCollection.find().skip(2);
@@ -158,7 +180,7 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/api/companies', verifyToken, async (req, res) => {
+        app.get('/api/companies', verifyToken, verifyAdmin, async (req, res) => {
             const cursor = companiesCollection.find();
             const companies = await cursor.toArray();
 
@@ -173,7 +195,7 @@ async function run() {
             res.send(companies);
         })
 
-        app.get('/api/my/companies', async (req, res) => {
+        app.get('/api/my/companies', verifyToken, verifyRecruiter, async (req, res) => {
             const query = {};
             if (req.query.addedBy) {
                 query.addedBy = req.query.addedBy;
@@ -192,7 +214,7 @@ async function run() {
             res.send(result);
         });
 
-        app.patch('/api/companies/:id', logger, verifyToken, async (req, res) => {
+        app.patch('/api/companies/:id', logger, verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const updatedCompany = req.body;
             const filter = { _id: new ObjectId(id) }
@@ -227,11 +249,16 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/api/applications', verifyToken, async (req, res) => {
+        app.get('/api/applications', verifyToken, verifySeeker, async (req, res) => {
             const query = {};
             if (req.query.applicantId) {
                 query.applicantId = req.query.applicantId;
             }
+
+            if (req.user._id.toString() !== req.query.applicantId) {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+
             if (req.query.jobId) {
                 query.jobId = req.query.jobId;
             }
